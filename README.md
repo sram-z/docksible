@@ -1,6 +1,6 @@
 # Docksible
 
-Docksible is a script that helps you manage easily docker images and test deployments with Ansible.
+Docksible is a script that helps you manage easily docker containers and test deployments with Ansible.
 
 - [Docksible](#docksible)
   - [Automating with Docksible](#automating-with-docksible)
@@ -28,7 +28,7 @@ At first, make sure that the `docksible` script is executable.
 ### Docksible commands and options
 
 ```console
-run <command> [option]
+docksible <command> [option]
 
 Commandes:
   create:   create one or more containers separeted by a comma.
@@ -51,8 +51,6 @@ Options:
 Coming soon...
 
 ## Thanks to
-
-- [roberdebock](https://github.com/robertdebock/docker-debian-systemd/blob/master/Dockerfile) for his Dockerfile.
 
 - [priximmo](https://gitlab.com/xavki/presentations-scripting/-/blob/master/shell/deploy.sh) for script inspiration.
   
