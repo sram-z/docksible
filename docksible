@@ -1,0 +1,143 @@
+#!/bin/bash
+
+
+# Copyright (C) 2022  Zoltan SRAM
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+# Constants variable
+readonly USAGE="
+run <command> [option]
+
+Commands:
+  create:   create one or more containers separeted by a comma.
+ 
+ ansible:   create minimal structure for ansible.
+ 
+   purge:   delete all container(s) created by docksible.
+
+Options:      
+    - k :   permit to initialise containers with your ssh key
+            dockesible create -k <your_ssh_public_key>
+            It supposed that your ssh key is stored in the default directory: 
+            ~/.ssh/key_ssh.pub
+
+    - h :   help
+"
+
+
+readonly ANSIBLE_STRUCTURE="
+All:
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  hosts:"
+
+
+# Functions
+_exit(){
+    cr=${1}
+    echo "End with code ${cr}"
+    exit "${cr}"
+}
+
+_fail(){
+    msg=${*}
+    echo "ERROR ${msg:-'no error message'}"
+    _exit 1
+}
+
+_succeed(){
+    msg=${*}
+    echo "Succeed ${msg:-'no succeed message'}"
+    _exit 0
+}
+
+
+_create(){
+    IFS=", " read -r -a names <<< "$1" 
+    for name in "${names[@]}";do
+        docker run -tid --privileged -v /sys/fs/cgroup:/sys/fs/cgroup --cgroupns=host --name "${name}" -h "${name}" sramz/debian-systemd-ssh:latest
+        docker exec -ti "${name}" /bin/bash -c "useradd -m -p $6$root$N8eFzhP5TW/1Wl1YXkIGagZroL.BmOIKvdCEdFDgndVp1uiOE6pZOZ8e.I/.50xHwXH03TeV0/gBC1ylGDzyJ0 ${USER}"
+        docker exec -ti "${name}" /bin/bash -c "sed -i 's#${USER}:\*#${USER}:$$6$zoli$7UzlmBSzL0cDyqwTYBubdMOcn8WzEbEP4kcO92JnfRGaeQ.iI4H9yX0R93LVcGsvgv2DuckKvOBvYY.CYMCPw0#' /etc/shadow"
+        docker exec -ti "${name}" /bin/bash -c "usermod -aG sudo ${USER}"
+        docker exec -ti "${name}" /bin/bash -c "mkdir  ${HOME}/.ssh && chmod 700 ${HOME}/.ssh && chown $USER:$USER $HOME/.ssh"
+        if [ -e "${ssh_key}" ] ; then
+            docker cp "$HOME"/.ssh/"${ssh_key}" "${name}":"$HOME"/.ssh/authorized_keys
+            docker exec -ti "${name}" /bin/bash -c "chmod 600 ${HOME}/.ssh/authorized_keys && chown $USER:$USER $HOME/.ssh/authorized_keys"
+            docker exec -ti "${name}" /bin/bash -c "systemctl start ssh"
+        fi
+        echo "${name}" >> host_names
+    done
+    echo "The followed container(s) was created:" "${names[@]}"
+    _succeed
+}
+
+
+_ansible(){
+    mkdir -p ansible/group_vars ansible/host_vars
+    touch ansible/00_inventory.yml
+    echo "${ANSIBLE_STRUCTURE}" > ansible/00_inventory.yml
+    if [[ -e host_names ]]; then 
+        while read -r hostname; do
+        ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$hostname")
+        echo "    $ip:" >> ansible/00_inventory.yml
+        done < host_names
+    fi
+    _succeed
+}
+
+
+_purge(){
+    if [[ -e host_names ]]; then
+        echo "The followed container(s) will be purged:"
+        while read -r hostname; do
+        docker rm -f "$hostname"
+        done < host_names
+        rm -rf ansible/ && rm -r host_names
+    else
+        echo "I didn't find container(s) created with this script."
+    fi
+    _succeed
+}
+
+
+_help(){
+    echo -e "${USAGE}"
+    _succeed
+} 
+
+
+main(){
+
+    action=${1}
+    shift
+
+    while getopts "k:h" flag; do
+        case ${flag} in
+            k)      ssh_key=${OPTARG} ;;
+            h|*)    _help ;;
+        esac
+    done
+
+    case ${action} in
+        ansible)    _ansible ;;
+        create)     _create "$@";;
+        purge)      _purge ;;
+        h|*)        _help;;
+    esac
+}
+
+main "$@"
+
