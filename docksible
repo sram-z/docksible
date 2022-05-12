@@ -28,10 +28,9 @@ Commands:
    purge:   delete all container(s) created by docksible.
 
 Options:      
-    - k :   permit to initialise containers with your ssh key
-            dockesible create -k <your_ssh_public_key>
-            It supposed that your ssh key is stored in the default directory: 
-            ~/.ssh/key_ssh.pub
+    - k :   permit to initialise containers with your ssh key.
+            Example: docksible create -k <your_ssh_public_key> . (It supposed that your ssh key is stored in the default directory: 
+            ~/.ssh/key_ssh.pub)
 
     - h :   help
 "
@@ -88,6 +87,20 @@ _create(){
     _succeed
 }
 
+_list(){
+    if [[ -e host_names ]]; then
+        echo "List of the containers created by Docksible:"
+        echo "HOSTS / IP ADRESSES:"
+        echo "--------------------"
+        while read -r hostname; do
+            ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$hostname")
+            echo "$hostname : $ip" 
+        done < host_names
+    else
+        echo "I didn't find containers created by Docksible."
+        _succeed
+    fi
+}
 
 _ansible(){
     mkdir -p ansible/group_vars ansible/host_vars
@@ -138,6 +151,7 @@ main(){
     case ${action} in
         ansible)    _ansible ;;
         create)     _create "$@";;
+        list)       _list ;;
         purge)      _purge ;;
         h|*)        _help;;
     esac
