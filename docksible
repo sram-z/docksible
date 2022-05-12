@@ -64,13 +64,17 @@ _succeed(){
     _exit 0
 }
 
+_createpasswd(){
+    openssl passwd -6 -salt "${@}"
+}
 
 _create(){
+    user_passwd=$(_createpasswd "${USER}" "${USER}")
+    echo "$user_passwd"
     IFS=", " read -r -a names <<< "$1" 
     for name in "${names[@]}";do
         docker run -tid --privileged -v /sys/fs/cgroup:/sys/fs/cgroup --cgroupns=host --name "${name}" -h "${name}" sramz/debian-systemd-ssh:latest
-        docker exec -ti "${name}" /bin/bash -c "useradd -m -p $6$root$N8eFzhP5TW/1Wl1YXkIGagZroL.BmOIKvdCEdFDgndVp1uiOE6pZOZ8e.I/.50xHwXH03TeV0/gBC1ylGDzyJ0 ${USER}"
-        docker exec -ti "${name}" /bin/bash -c "sed -i 's#${USER}:\*#${USER}:$$6$zoli$7UzlmBSzL0cDyqwTYBubdMOcn8WzEbEP4kcO92JnfRGaeQ.iI4H9yX0R93LVcGsvgv2DuckKvOBvYY.CYMCPw0#' /etc/shadow"
+        docker exec -ti "${name}" /bin/bash -c "useradd -m -p '$user_passwd' $USER"
         docker exec -ti "${name}" /bin/bash -c "usermod -aG sudo ${USER}"
         docker exec -ti "${name}" /bin/bash -c "mkdir  ${HOME}/.ssh && chmod 700 ${HOME}/.ssh && chown $USER:$USER $HOME/.ssh"
         if [ -e "${ssh_key}" ] ; then
