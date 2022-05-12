@@ -30,7 +30,7 @@ At first, make sure that the `docksible` script is executable.
 ```console
 docksible <command> [option]
 
-Commandes:
+Commands:
   create:   create one or more containers separeted by a comma.
  
  ansible:   create minimal structure for ansible.

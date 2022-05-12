@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 # Copyright (C) 2022  Zoltan SRAM
 
 # This program is free software: you can redistribute it and/or modify
@@ -53,14 +52,15 @@ _exit(){
 }
 
 _fail(){
-    msg=${*}
-    echo "ERROR ${msg:-'no error message'}"
+    msg="${*}"
+    echo "ERROR ${msg:-no error message}"
     _exit 1
 }
 
+# shellcheck disable=SC2120
 _succeed(){
-    msg=${*}
-    echo "Succeed ${msg:-'no succeed message'}"
+    msg="${*}"
+    echo "Succeed: ${msg:-no succeed message}"
     _exit 0
 }
 
