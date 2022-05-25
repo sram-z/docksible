@@ -31,19 +31,20 @@ At first, make sure that the `docksible` script is executable.
 docksible <command> [option]
 
 Commands:
-  create:   create one or more containers separeted by a comma.
+  -c :  Create one or more containers separeted by a comma.
  
- ansible:   create minimal structure for ansible.
+  -a :  Create minimal structure for ansible.
  
-   purge:   delete all container(s) created by docksible.
+  -p :  Delete all container(s) created by Docksible (purge).
+
+  -l :  List conainer(s) created by Docksible.    
 
 Options:      
-    - k :   permit to initialise containers with your ssh key
-            dockesible create -k <your_ssh_public_key>
-            It supposed that your ssh key is stored in the default directory: 
-            ~/.ssh/key_ssh.pub
+  -k :  Permit to initialise containers with your ssh key.
+        Example: Docksible create -k <your_ssh_public_key>. 
+        (It supposed that your ssh key is stored in the default directory: ~/.ssh/key_ssh.pub)
 
-    - h :   help
+  -h :   help
 ```
 
 ## Examples
