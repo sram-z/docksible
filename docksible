@@ -21,18 +21,20 @@ readonly USAGE="
 run <command> [option]
 
 Commands:
-  create:   create one or more containers separeted by a comma.
+  -c :  Create one or more containers separeted by a comma.
  
- ansible:   create minimal structure for ansible.
+  -a :  Create minimal structure for ansible.
  
-   purge:   delete all container(s) created by docksible.
+  -p :  Delete all container(s) created by Docksible (purge).
+
+  -l :  List conainer(s) created by Docksible.    
 
 Options:      
-    - k :   permit to initialise containers with your ssh key.
-            Example: docksible create -k <your_ssh_public_key> . (It supposed that your ssh key is stored in the default directory: 
-            ~/.ssh/key_ssh.pub)
+  -k :  Permit to initialise containers with your ssh key.
+        Example: Docksible create -k <your_ssh_public_key>. 
+        (It supposed that your ssh key is stored in the default directory: ~/.ssh/key_ssh.pub)
 
-    - h :   help
+  -h :   help
 "
 
 
@@ -46,45 +48,25 @@ All:
 # Functions
 _exit(){
     cr=${1}
-    echo "End with code ${cr}"
+    echo "Exit with code ${cr}"
     exit "${cr}"
 }
 
 _fail(){
     msg="${*}"
-    echo "ERROR ${msg:-no error message}"
+    echo "ERROR ${msg:-no message}"
     _exit 1
 }
 
 # shellcheck disable=SC2120
 _succeed(){
     msg="${*}"
-    echo "Succeed: ${msg:-no succeed message}"
+    echo "${msg:-no message}"
     _exit 0
 }
 
 _createpasswd(){
     openssl passwd -6 -salt "${@}"
-}
-
-_create(){
-    user_passwd=$(_createpasswd "${USER}" "${USER}")
-    echo "$user_passwd"
-    IFS=", " read -r -a names <<< "$1" 
-    for name in "${names[@]}";do
-        docker run -tid --privileged -v /sys/fs/cgroup:/sys/fs/cgroup --cgroupns=host --name "${name}" -h "${name}" sramz/debian-systemd-ssh:latest
-        docker exec -ti "${name}" /bin/bash -c "useradd -m -p '$user_passwd' $USER"
-        docker exec -ti "${name}" /bin/bash -c "usermod -aG sudo ${USER}"
-        docker exec -ti "${name}" /bin/bash -c "mkdir  ${HOME}/.ssh && chmod 700 ${HOME}/.ssh && chown $USER:$USER $HOME/.ssh"
-        if [ -e "${ssh_key}" ] ; then
-            docker cp "$HOME"/.ssh/"${ssh_key}" "${name}":"$HOME"/.ssh/authorized_keys
-            docker exec -ti "${name}" /bin/bash -c "chmod 600 ${HOME}/.ssh/authorized_keys && chown $USER:$USER $HOME/.ssh/authorized_keys"
-            docker exec -ti "${name}" /bin/bash -c "systemctl start ssh"
-        fi
-        echo "${name}" >> host_names
-    done
-    echo "The followed container(s) was created:" "${names[@]}"
-    _succeed
 }
 
 _list(){
@@ -97,8 +79,7 @@ _list(){
             echo "$hostname : $ip" 
         done < host_names
     else
-        echo "I didn't find containers created by Docksible."
-        _succeed
+        _succeed "I didn't find containers created by Docksible."
     fi
 }
 
@@ -124,7 +105,7 @@ _purge(){
         done < host_names
         rm -rf ansible/ && rm -r host_names
     else
-        echo "I didn't find container(s) created with this script."
+        echo "Nothing to purge."
     fi
     _succeed
 }
@@ -135,27 +116,48 @@ _help(){
     _succeed
 } 
 
+_create(){
+    user_passwd=$(_createpasswd "${USER}" "${USER}")
+    IFS=", " read -r -a names <<< "$1" 
+    for name in "${names[@]}";do
+        docker run -tid --privileged -v /sys/fs/cgroup:/sys/fs/cgroup --cgroupns=host --name "${name}" -h "${name}" sramz/debian-systemd-ssh:latest
+        docker exec -ti "${name}" /bin/bash -c "useradd -m -p '$user_passwd' $USER"
+        docker exec -ti "${name}" /bin/bash -c "usermod -aG sudo ${USER}"
+        docker exec -ti "${name}" /bin/bash -c "mkdir  ${HOME}/.ssh && chmod 700 ${HOME}/.ssh && chown $USER:$USER $HOME/.ssh"
+        if [[ $2 != "" ]] ; then
+            docker cp "$HOME"/.ssh/"$2" "${name}":"$HOME"/.ssh/authorized_keys
+            docker exec -ti "${name}" /bin/bash -c "chmod 600 ${HOME}/.ssh/authorized_keys && chown $USER:$USER $HOME/.ssh/authorized_keys"
+            docker exec -ti "${name}" /bin/bash -c "systemctl start ssh"
+        fi
+        echo "${name}" >> host_names
+        _succeed "The followed container(s) was created:" "${names[@]}"
+    done
+}
+
 
 main(){
+    while getopts 'c:k:lpa' OPTION; do
+        case "$OPTION" in
+            k) ssh_key="$OPTARG" ;;
 
-    action=${1}
-    shift
+            c) create="$OPTARG" ;;
 
-    while getopts "k:h" flag; do
-        case ${flag} in
-            k)      ssh_key=${OPTARG} ;;
-            h|*)    _help ;;
+            l) _list ;;
+
+            p) _purge ;;
+
+            a) _ansible ;;
+
+            ?) _help ;;
         esac
     done
+    shift $((OPTIND-1))
 
-    case ${action} in
-        ansible)    _ansible ;;
-        create)     _create "$@";;
-        list)       _list ;;
-        purge)      _purge ;;
-        h|*)        _help;;
-    esac
+    if [[ $ssh_key != "" ]]; then
+        _create "$create" "$ssh_key"
+    else
+        _create "$create"
+    fi
 }
 
 main "$@"
-
