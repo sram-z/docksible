@@ -118,29 +118,26 @@ _help(){
 
 _create(){
     user_passwd=$(_createpasswd "${USER}" "${USER}")
-    IFS=", " read -r -a names <<< "$1" 
+    IFS=", " read -r -a names <<< "$@"
+    echo "${names[@]}"
     for name in "${names[@]}";do
         docker run -tid --privileged -v /sys/fs/cgroup:/sys/fs/cgroup --cgroupns=host --name "${name}" -h "${name}" sramz/debian-systemd-ssh:latest
         docker exec -ti "${name}" /bin/bash -c "useradd -m -p '$user_passwd' $USER"
         docker exec -ti "${name}" /bin/bash -c "usermod -aG sudo ${USER}"
         docker exec -ti "${name}" /bin/bash -c "mkdir  ${HOME}/.ssh && chmod 700 ${HOME}/.ssh && chown $USER:$USER $HOME/.ssh"
-        if [[ $2 != "" ]] ; then
-            docker cp "$HOME"/.ssh/"$2" "${name}":"$HOME"/.ssh/authorized_keys
-            docker exec -ti "${name}" /bin/bash -c "chmod 600 ${HOME}/.ssh/authorized_keys && chown $USER:$USER $HOME/.ssh/authorized_keys"
-            docker exec -ti "${name}" /bin/bash -c "systemctl start ssh"
-        fi
+        docker exec -ti "${name}" /bin/bash -c "systemctl start ssh"
         echo "${name}" >> host_names
-        _succeed "The followed container(s) was created:" "${names[@]}"
     done
+    _succeed "The followed container(s) was created:" "${names[@]}"
 }
 
 
 main(){
     while getopts 'c:k:lpa' OPTION; do
         case "$OPTION" in
-            k) ssh_key="$OPTARG" ;;
+            k) _ssh="$OPTARG" ;;
 
-            c) create="$OPTARG" ;;
+            c) _create="$OPTARG" ;;
 
             l) _list ;;
 
@@ -152,12 +149,6 @@ main(){
         esac
     done
     shift $((OPTIND-1))
-
-    if [[ $ssh_key != "" ]]; then
-        _create "$create" "$ssh_key"
-    else
-        _create "$create"
-    fi
 }
 
 main "$@"
