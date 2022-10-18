@@ -20,23 +20,17 @@
 readonly USAGE="
 run <command> [option]
 
-Commands:
+Options:
   -c :  Create one or more containers separeted by a comma.
  
   -a :  Create minimal structure for ansible.
  
   -p :  Delete all container(s) created by Docksible (purge).
 
-  -l :  List conainer(s) created by Docksible.    
-
-Options:      
-  -k :  Permit to initialise containers with your ssh key.
-        Example: Docksible create -k <your_ssh_public_key>. 
-        (It supposed that your ssh key is stored in the default directory: ~/.ssh/key_ssh.pub)
+  -l :  List conainer(s) created by Docksible.         
 
   -h :   help
 "
-
 
 readonly ANSIBLE_STRUCTURE="
 All:
@@ -113,7 +107,7 @@ _purge(){
 
 _help(){
     echo -e "${USAGE}"
-    _succeed
+    #_succeed
 } 
 
 _create(){
@@ -133,11 +127,10 @@ _create(){
 
 
 main(){
-    while getopts 'c:k:lpa' OPTION; do
+    while getopts 'c:lpah' OPTION; do
         case "$OPTION" in
-            k) _ssh="$OPTARG" ;;
 
-            c) _create="$OPTARG" ;;
+            c) create="$OPTARG";; 
 
             l) _list ;;
 
@@ -145,10 +138,16 @@ main(){
 
             a) _ansible ;;
 
-            ?) _help ;;
+            *) _help ;;
         esac
     done
     shift $((OPTIND-1))
+
+    if [[ $create != "" ]]; then
+        _create "$create"
+    else
+        _help
+    fi
 }
 
 main "$@"
