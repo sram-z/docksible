@@ -39,11 +39,6 @@ Commands:
 
   -l :  List conainer(s) created by Docksible.    
 
-Options:      
-  -k :  Permit to initialise containers with your ssh key.
-        Example: Docksible create -k <your_ssh_public_key>. 
-        (It supposed that your ssh key is stored in the default directory: ~/.ssh/key_ssh.pub)
-
   -h :   help
 ```
 
